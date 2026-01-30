@@ -1,0 +1,244 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  username            String
+  passwordHash        String   @map("password_hash")
+  profileImageUrl     String?  @map("profile_image_url")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  enrollments         Enrollment[]
+  reviews             Review[]
+  lessonProgress      UserLessonProgress[]
+  notes               Note[]
+  recentCourses       RecentCourse[]
+
+  @@map("users")
+}
+
+model Category {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  icon            String?
+  displayOrder    Int      @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  courses         Course[]
+
+  @@map("categories")
+}
+
+model Course {
+  id              String   @id @default(cuid())
+  title           String
+  instructorName  String   @map("instructor_name")
+  categoryId      String   @map("category_id")
+  description     String   @db.Text
+  imageUrl        String   @map("image_url")
+  price           Float
+  originalPrice   Float?   @map("original_price")
+  durationHours   Float    @map("duration_hours")
+  rating          Float    @default(0)
+  totalStudents   Int      @default(0) @map("total_students")
+  isBestseller    Boolean  @default(false) @map("is_bestseller")
+  isPopular       Boolean  @default(false) @map("is_popular")
+  isNew           Boolean  @default(false) @map("is_new")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sections        CurriculumSection[]
+  enrollments     Enrollment[]
+  reviews         Review[]
+  learningPoints  LearningPoint[]
+  recentCourses   RecentCourse[]
+
+  @@map("courses")
+}
+
+model CurriculumSection {
+  id              String   @id @default(cuid())
+  courseId        String   @map("course_id")
+  title           String
+  displayOrder    Int      @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course          Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons         Lesson[]
+
+  @@map("curriculum_sections")
+}
+
+model Lesson {
+  id              String   @id @default(cuid())
+  sectionId       String   @map("section_id")
+  title           String
+  videoUrl        String   @map("video_url")
+  durationMinutes Int      @map("duration_minutes")
+  description     String?  @db.Text
+  materialsUrl    String?  @map("materials_url")
+  displayOrder    Int      @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  section         CurriculumSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  userProgress    UserLessonProgress[]
+  notes           Note[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id                  String   @id @default(cuid())
+  userId              String   @map("user_id")
+  courseId            String   @map("course_id")
+  enrolledAt          DateTime @default(now()) @map("enrolled_at")
+  completedAt         DateTime? @map("completed_at")
+  progressPercentage  Float    @default(0) @map("progress_percentage")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user                User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course              Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress      UserLessonProgress[]
+  notes               Note[]
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model UserLessonProgress {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  lessonId        String   @map("lesson_id")
+  enrollmentId    String   @map("enrollment_id")
+  isCompleted     Boolean  @default(false) @map("is_completed")
+  lastWatchedAt   DateTime? @map("last_watched_at")
+  watchTimeSeconds Int     @default(0) @map("watch_time_seconds")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson          Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment      Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("user_lesson_progress")
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  courseId        String   @map("course_id")
+  rating          Int
+  comment         String   @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("reviews")
+}
+
+model LearningPoint {
+  id              String   @id @default(cuid())
+  courseId        String   @map("course_id")
+  description     String   @db.Text
+  displayOrder    Int      @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course          Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("learning_points")
+}
+
+model Note {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  lessonId        String   @map("lesson_id")
+  enrollmentId    String   @map("enrollment_id")
+  content         String   @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson          Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  enrollment      Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("notes")
+}
+
+model Banner {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?  @db.Text
+  imageUrl        String   @map("image_url")
+  link            String?
+  displayOrder    Int      @map("display_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
+
+model Promotion {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?  @db.Text
+  discountPercent Float?   @map("discount_percent")
+  discountAmount  Float?   @map("discount_amount")
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("promotions")
+}
+
+model RecentCourse {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  courseId        String   @map("course_id")
+  viewedAt        DateTime @default(now()) @map("viewed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("recent_courses")
+}
