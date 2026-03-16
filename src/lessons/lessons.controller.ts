@@ -27,6 +27,8 @@ export class LessonsController {
     constructor(private lessonsService: LessonsService) {}
 
     @Get(":lessonId")
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
     @ApiOperation({ summary: "Get lesson" })
     @ApiParam({ name: "lessonId", description: "Lesson id" })
     @ApiResponse({
@@ -34,8 +36,8 @@ export class LessonsController {
         description: "Lesson",
         type: LessonResponseDto,
     })
-    async getLesson(@Param("lessonId") lessonId: string) {
-        return this.lessonsService.getLesson(lessonId);
+    async getLesson(@Request() req: any, @Param("lessonId") lessonId: string) {
+        return this.lessonsService.getLesson(req.user.id, lessonId);
     }
 
     @Get(":lessonId/materials")

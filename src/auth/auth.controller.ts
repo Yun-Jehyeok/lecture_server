@@ -8,6 +8,8 @@ import {
     Request,
     HttpCode,
     Param,
+    Req,
+    Res,
 } from "@nestjs/common";
 import {
     ApiTags,
@@ -26,11 +28,17 @@ import { AuthService } from "./auth.service";
 import { UsersService } from "@/users/users.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import {
+    GoogleAuthGuard,
+    KakaoAuthGuard,
+    NaverAuthGuard,
+} from "./social-auth.guard";
+import {
     RegisterDto,
     LoginDto,
     UpdateProfileDto,
     ChangePasswordDto,
 } from "./auth.dto";
+import { Response } from "express";
 
 @Controller("api/auth")
 @ApiTags("Auth")
@@ -76,7 +84,12 @@ export class AuthController {
         description: "Successfully logged out",
         type: MessageResponseDto,
     })
-    logout() {
+    logout(@Res({ passthrough: true }) res: Response) {
+        res.clearCookie("accessToken", {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: false,
+        });
         return { message: "Successfully logged out" };
     }
 
@@ -91,6 +104,95 @@ export class AuthController {
     })
     async getCurrentUser(@Request() req: any) {
         return this.authService.validateUser(req.user.id);
+    }
+
+    // Google OAuth
+    @Get("google")
+    @UseGuards(GoogleAuthGuard)
+    @ApiOperation({ summary: "Google OAuth login" })
+    @ApiResponse({ status: 200, description: "Redirects to Google login" })
+    async googleLogin() {
+        // Guard redirects to Google
+    }
+
+    @Get("google/callback")
+    @UseGuards(GoogleAuthGuard)
+    @ApiOperation({ summary: "Google OAuth callback" })
+    @ApiResponse({
+        status: 200,
+        description: "Google login successful",
+        type: AuthResponseDto,
+    })
+    async googleCallback(@Req() req: any, @Res() res: Response) {
+        const result = await this.authService.socialLogin(req.user);
+
+        res.cookie("accessToken", result.accessToken, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: false,
+        });
+        const redirectUrl = `http://localhost:3000/auth/social`;
+        return res.redirect(redirectUrl);
+    }
+
+    // Kakao OAuth
+    @Get("kakao")
+    @UseGuards(KakaoAuthGuard)
+    @ApiOperation({ summary: "Kakao OAuth login" })
+    @ApiResponse({ status: 200, description: "Redirects to Kakao login" })
+    async kakaoLogin() {
+        // Guard redirects to Kakao
+    }
+
+    @Get("kakao/callback")
+    @UseGuards(KakaoAuthGuard)
+    @ApiOperation({ summary: "Kakao OAuth callback" })
+    @ApiResponse({
+        status: 200,
+        description: "Kakao login successful",
+        type: AuthResponseDto,
+    })
+    async kakaoCallback(@Req() req: any, @Res() res: Response) {
+        const result = await this.authService.socialLogin(req.user);
+        res.cookie("accessToken", result.accessToken, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: false,
+        });
+        const redirectUrl = `http://localhost:3000/auth/social?accessToken=${encodeURIComponent(
+            result.accessToken,
+        )}`;
+        return res.redirect(redirectUrl);
+    }
+
+    // Naver OAuth
+    @Get("naver")
+    @UseGuards(NaverAuthGuard)
+    @ApiOperation({ summary: "Naver OAuth login" })
+    @ApiResponse({ status: 200, description: "Redirects to Naver login" })
+    async naverLogin() {
+        // Guard redirects to Naver
+    }
+
+    @Get("naver/callback")
+    @UseGuards(NaverAuthGuard)
+    @ApiOperation({ summary: "Naver OAuth callback" })
+    @ApiResponse({
+        status: 200,
+        description: "Naver login successful",
+        type: AuthResponseDto,
+    })
+    async naverCallback(@Req() req: any, @Res() res: Response) {
+        const result = await this.authService.socialLogin(req.user);
+        res.cookie("accessToken", result.accessToken, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: false,
+        });
+        const redirectUrl = `http://localhost:3000/auth/social?accessToken=${encodeURIComponent(
+            result.accessToken,
+        )}`;
+        return res.redirect(redirectUrl);
     }
 }
 

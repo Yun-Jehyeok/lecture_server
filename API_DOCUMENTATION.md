@@ -481,6 +481,12 @@ Content-Type: application/json
 
 레슨 상세 조회
 
+**헤더:**
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
 **응답:**
 
 ```json
@@ -491,6 +497,7 @@ Content-Type: application/json
     "durationMinutes": 45,
     "description": "React가 무엇인지...",
     "materialsUrl": "https://...",
+    "watchTimeSeconds": 300,
     "section": {
         "id": "section-1",
         "title": "React 기초"

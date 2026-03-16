@@ -122,6 +122,9 @@ export class LessonResponseDto {
 
     @ApiProperty({ example: 1 })
     displayOrder!: number;
+
+    @ApiProperty({ example: 300, description: "User watch time in seconds" })
+    watchTimeSeconds!: number;
 }
 
 export class SectionResponseDto {

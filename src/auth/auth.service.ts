@@ -109,4 +109,48 @@ export class AuthService {
             expiresIn: this.configService.get<number>("JWT_EXPIRES_IN", 86400),
         } as any);
     }
+
+    async socialLogin(profile: {
+        providerId: string;
+        email: string;
+        username: string;
+        profileImageUrl?: string;
+        provider: string;
+    }) {
+        // 기존 소셜 로그인 사용자 찾기
+        let user = await (this.prismaService as any).user.findUnique({
+            where: {
+                provider_providerId: {
+                    provider: profile.provider,
+                    providerId: profile.providerId,
+                },
+            },
+        });
+
+        // 사용자가 없으면 새로 생성
+        if (!user) {
+            user = await (this.prismaService as any).user.create({
+                data: {
+                    email: profile.email,
+                    username: profile.username,
+                    profileImageUrl: profile.profileImageUrl,
+                    provider: profile.provider,
+                    providerId: profile.providerId,
+                    passwordHash: null, // 소셜 로그인은 비밀번호 불필요
+                },
+            });
+        }
+
+        const token = this.generateToken(user.id, user.email);
+
+        return {
+            user: {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                profileImageUrl: user.profileImageUrl,
+            },
+            accessToken: token,
+        };
+    }
 }

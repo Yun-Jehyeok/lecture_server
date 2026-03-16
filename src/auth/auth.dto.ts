@@ -53,3 +53,21 @@ export class ChangePasswordDto {
     @MinLength(6)
     confirmPassword!: string;
 }
+
+export class SocialLoginDto {
+    @ApiProperty({
+        example: "google",
+        description: "Social login provider (google, kakao, naver)",
+    })
+    @IsString()
+    @IsNotEmpty()
+    provider!: string;
+
+    @ApiProperty({
+        example: "ya29.a0AfH6SMBx...",
+        description: "Access token from social provider",
+    })
+    @IsString()
+    @IsNotEmpty()
+    accessToken!: string;
+}

@@ -5,13 +5,32 @@ import { PrismaService } from "@/common/prisma.service";
 export class LessonsService {
     constructor(private prismaService: PrismaService) {}
 
-    async getLesson(lessonId: string) {
-        return (this.prismaService as any).lesson.findUnique({
+    async getLesson(userId: string, lessonId: string) {
+        const lesson = await (this.prismaService as any).lesson.findUnique({
             where: { id: lessonId },
             include: {
                 section: true,
             },
         });
+
+        const progress = await (
+            this.prismaService as any
+        ).userLessonProgress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+            select: {
+                watchTimeSeconds: true,
+            },
+        });
+
+        return {
+            ...lesson,
+            watchTimeSeconds: progress?.watchTimeSeconds ?? 0,
+        };
     }
 
     async getLessonMaterials(lessonId: string) {
@@ -66,20 +85,6 @@ export class LessonsService {
         lessonId: string,
         watchTimeSeconds: number,
     ) {
-        const existingProgress = await (
-            this.prismaService as any
-        ).userLessonProgress.findUnique({
-            where: {
-                userId_lessonId: {
-                    userId,
-                    lessonId,
-                },
-            },
-        });
-
-        const newWatchTime =
-            existingProgress.watchTimeSeconds + watchTimeSeconds;
-
         return (this.prismaService as any).userLessonProgress.update({
             where: {
                 userId_lessonId: {
@@ -88,7 +93,7 @@ export class LessonsService {
                 },
             },
             data: {
-                watchTimeSeconds: newWatchTime,
+                watchTimeSeconds,
                 lastWatchedAt: new Date(),
             },
         });

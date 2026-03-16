@@ -7,6 +7,9 @@ import { AppService } from "./app.service";
 import { PrismaService } from "./common/prisma.service";
 import { CryptoService } from "./common/crypto.service";
 import { JwtStrategy } from "./auth/jwt.strategy";
+import { GoogleStrategy } from "./auth/google.strategy";
+import { KakaoStrategy } from "./auth/kakao.strategy";
+import { NaverStrategy } from "./auth/naver.strategy";
 import { AuthService } from "./auth/auth.service";
 import { AuthController, UsersController } from "./auth/auth.controller";
 import { UsersService } from "./users/users.service";
@@ -70,6 +73,9 @@ import { LearningProgressController } from "./learning-progress/learning-progres
         PrismaService,
         CryptoService,
         JwtStrategy,
+        GoogleStrategy,
+        KakaoStrategy,
+        NaverStrategy,
         AuthService,
         UsersService,
         CategoriesService,
