@@ -7,6 +7,14 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    const allowedOrigins = (
+        process.env.CORS_ORIGINS ||
+        "http://localhost:3000,https://lecture-client.vercel.app"
+    )
+        .split(",")
+        .map((origin) => origin.trim().replace(/\/$/, ""))
+        .filter(Boolean);
+
     // Enable validation
     app.useGlobalPipes(
         new ValidationPipe({
@@ -18,7 +26,7 @@ async function bootstrap() {
 
     // Enable CORS
     app.enableCors({
-        origin: ["http://localhost:3000", "https://lecture-client.vercel.app/"],
+        origin: allowedOrigins,
         methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
         credentials: true,
     });

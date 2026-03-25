@@ -40,6 +40,12 @@ import {
 } from "./auth.dto";
 import { Response } from "express";
 
+const ACCESS_TOKEN_COOKIE_OPTIONS = {
+    httpOnly: true,
+    sameSite: "none" as const,
+    secure: true,
+};
+
 @Controller("api/auth")
 @ApiTags("Auth")
 export class AuthController {
@@ -85,11 +91,7 @@ export class AuthController {
         type: MessageResponseDto,
     })
     logout(@Res({ passthrough: true }) res: Response) {
-        res.clearCookie("accessToken", {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-        });
+        res.clearCookie("accessToken", ACCESS_TOKEN_COOKIE_OPTIONS);
         return { message: "Successfully logged out" };
     }
 
@@ -126,11 +128,11 @@ export class AuthController {
     async googleCallback(@Req() req: any, @Res() res: Response) {
         const result = await this.authService.socialLogin(req.user);
 
-        res.cookie("accessToken", result.accessToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-        });
+        res.cookie(
+            "accessToken",
+            result.accessToken,
+            ACCESS_TOKEN_COOKIE_OPTIONS,
+        );
         const redirectUrl = `https://lecture-client.vercel.app/auth/social`;
         return res.redirect(redirectUrl);
     }
@@ -154,11 +156,11 @@ export class AuthController {
     })
     async kakaoCallback(@Req() req: any, @Res() res: Response) {
         const result = await this.authService.socialLogin(req.user);
-        res.cookie("accessToken", result.accessToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-        });
+        res.cookie(
+            "accessToken",
+            result.accessToken,
+            ACCESS_TOKEN_COOKIE_OPTIONS,
+        );
         const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
@@ -184,11 +186,11 @@ export class AuthController {
     })
     async naverCallback(@Req() req: any, @Res() res: Response) {
         const result = await this.authService.socialLogin(req.user);
-        res.cookie("accessToken", result.accessToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: false,
-        });
+        res.cookie(
+            "accessToken",
+            result.accessToken,
+            ACCESS_TOKEN_COOKIE_OPTIONS,
+        );
         const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
