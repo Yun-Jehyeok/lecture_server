@@ -133,7 +133,7 @@ export class AuthController {
             result.accessToken,
             ACCESS_TOKEN_COOKIE_OPTIONS,
         );
-        const redirectUrl = `https://lecture-client.vercel.app/auth/social`;
+        const redirectUrl = `https://cobbak-lecture.com/auth/social`;
         return res.redirect(redirectUrl);
     }
 
@@ -161,7 +161,7 @@ export class AuthController {
             result.accessToken,
             ACCESS_TOKEN_COOKIE_OPTIONS,
         );
-        const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
+        const redirectUrl = `https://cobbak-lecture.com/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
         return res.redirect(redirectUrl);
@@ -191,7 +191,7 @@ export class AuthController {
             result.accessToken,
             ACCESS_TOKEN_COOKIE_OPTIONS,
         );
-        const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
+        const redirectUrl = `https://cobbak-lecture.com/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
         return res.redirect(redirectUrl);
