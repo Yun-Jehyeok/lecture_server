@@ -81,7 +81,7 @@ docker compose version
 ```bash
 mkdir -p ~/apps/lecture-server
 cd ~/apps/lecture-server
-git clone <YOUR_REPOSITORY_URL> .
+git clone https://github.com/Yun-Jehyeok/lecture_server.git .
 ```
 
 환경파일 생성:
