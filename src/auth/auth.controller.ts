@@ -131,7 +131,7 @@ export class AuthController {
             sameSite: "lax",
             secure: false,
         });
-        const redirectUrl = `http://localhost:3000/auth/social`;
+        const redirectUrl = `https://lecture-client.vercel.app/auth/social`;
         return res.redirect(redirectUrl);
     }
 
@@ -159,7 +159,7 @@ export class AuthController {
             sameSite: "lax",
             secure: false,
         });
-        const redirectUrl = `http://localhost:3000/auth/social?accessToken=${encodeURIComponent(
+        const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
         return res.redirect(redirectUrl);
@@ -189,7 +189,7 @@ export class AuthController {
             sameSite: "lax",
             secure: false,
         });
-        const redirectUrl = `http://localhost:3000/auth/social?accessToken=${encodeURIComponent(
+        const redirectUrl = `https://lecture-client.vercel.app/auth/social?accessToken=${encodeURIComponent(
             result.accessToken,
         )}`;
         return res.redirect(redirectUrl);
