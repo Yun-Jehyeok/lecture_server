@@ -1,4 +1,10 @@
-import { IsEmail, IsString, MinLength, IsNotEmpty } from "class-validator";
+import {
+    IsEmail,
+    IsString,
+    MinLength,
+    IsNotEmpty,
+    IsOptional,
+} from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class RegisterDto {
@@ -86,6 +92,7 @@ export class ExchangeCodeDto {
         example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
         description: "Optional OAuth state for additional CSRF validation",
     })
+    @IsOptional()
     @IsString()
     state?: string;
 }

@@ -6,3 +6,4 @@ dist
 .vscode
 .idea
 *.md
+AWS_DEPLOYMENT_GUIDE.md
