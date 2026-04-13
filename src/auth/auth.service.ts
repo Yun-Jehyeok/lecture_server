@@ -4,14 +4,27 @@ import {
     UnauthorizedException,
     ConflictException,
 } from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "@/common/prisma.service";
 import { CryptoService } from "@/common/crypto.service";
 import { RegisterDto, LoginDto } from "./auth.dto";
 
+type SocialExchangeCodePayload = {
+    userId: string;
+    provider: string;
+    state?: string;
+    expiresAt: number;
+};
+
 @Injectable()
 export class AuthService {
+    private readonly socialExchangeCodeStore = new Map<
+        string,
+        SocialExchangeCodePayload
+    >();
+
     constructor(
         private prismaService: PrismaService,
         private jwtService: JwtService,
@@ -40,7 +53,7 @@ export class AuthService {
             },
         });
 
-        const token = this.generateToken(user.id, user.email);
+        const token = this.generateAccessToken(user.id, user.email);
 
         return {
             user: {
@@ -71,7 +84,7 @@ export class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        const token = this.generateToken(user.id, user.email);
+        const token = this.generateAccessToken(user.id, user.email);
 
         return {
             user: {
@@ -103,11 +116,90 @@ export class AuthService {
         };
     }
 
-    private generateToken(userId: string, email: string): string {
+    private generateAccessToken(userId: string, email: string): string {
         const payload = { sub: userId, email };
         return this.jwtService.sign(payload, {
             expiresIn: this.configService.get<number>("JWT_EXPIRES_IN", 86400),
         } as any);
+    }
+
+    private generateRefreshToken(userId: string, email: string): string {
+        const payload = { sub: userId, email, type: "refresh" };
+        return this.jwtService.sign(payload, {
+            expiresIn: this.configService.get<string>(
+                "JWT_REFRESH_EXPIRES_IN",
+                "30d",
+            ),
+        } as any);
+    }
+
+    private getAccessTokenExpiresInSeconds(): number {
+        return this.configService.get<number>("JWT_EXPIRES_IN_SECONDS", 86400);
+    }
+
+    private cleanupExpiredSocialCodes() {
+        const now = Date.now();
+
+        for (const [code, payload] of this.socialExchangeCodeStore.entries()) {
+            if (payload.expiresAt <= now) {
+                this.socialExchangeCodeStore.delete(code);
+            }
+        }
+    }
+
+    createSocialExchangeCode(userId: string, provider: string, state?: string) {
+        this.cleanupExpiredSocialCodes();
+
+        const code = randomBytes(32).toString("hex");
+        const ttlMs = this.configService.get<number>(
+            "SOCIAL_EXCHANGE_CODE_TTL_MS",
+            60_000,
+        );
+
+        this.socialExchangeCodeStore.set(code, {
+            userId,
+            provider,
+            state,
+            expiresAt: Date.now() + ttlMs,
+        });
+
+        return code;
+    }
+
+    async exchangeSocialCode(code: string, state?: string) {
+        if (!code || code.length < 32) {
+            throw new BadRequestException("Invalid exchange code format");
+        }
+
+        this.cleanupExpiredSocialCodes();
+
+        const payload = this.socialExchangeCodeStore.get(code);
+        if (!payload) {
+            throw new UnauthorizedException("Invalid or expired exchange code");
+        }
+
+        this.socialExchangeCodeStore.delete(code);
+
+        if (payload.state && payload.state !== state) {
+            throw new UnauthorizedException("Invalid exchange state");
+        }
+
+        const user = await (this.prismaService as any).user.findUnique({
+            where: { id: payload.userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        const accessToken = this.generateAccessToken(user.id, user.email);
+        const refreshToken = this.generateRefreshToken(user.id, user.email);
+
+        return {
+            accessToken,
+            refreshToken,
+            expiresIn: this.getAccessTokenExpiresInSeconds(),
+        };
     }
 
     async socialLogin(profile: {
@@ -141,7 +233,7 @@ export class AuthService {
             });
         }
 
-        const token = this.generateToken(user.id, user.email);
+        const token = this.generateAccessToken(user.id, user.email);
 
         return {
             user: {

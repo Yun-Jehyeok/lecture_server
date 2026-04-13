@@ -23,6 +23,7 @@ import {
     UserResponseDto,
     MessageResponseDto,
     LearningStatsResponseDto,
+    TokenExchangeResponseDto,
 } from "@/common/dto/response.dto";
 import { AuthService } from "./auth.service";
 import { UsersService } from "@/users/users.service";
@@ -37,8 +38,10 @@ import {
     LoginDto,
     UpdateProfileDto,
     ChangePasswordDto,
+    ExchangeCodeDto,
 } from "./auth.dto";
 import { Response } from "express";
+import { ConfigService } from "@nestjs/config";
 
 const ACCESS_TOKEN_COOKIE_OPTIONS = {
     httpOnly: true,
@@ -52,7 +55,22 @@ export class AuthController {
     constructor(
         private authService: AuthService,
         private usersService: UsersService,
+        private configService: ConfigService,
     ) {}
+
+    private buildSocialCallbackRedirectUrl(code: string, state?: string) {
+        const callbackUrl =
+            this.configService.get<string>("FRONTEND_SOCIAL_CALLBACK_URL") ||
+            "http://localhost:3000/auth/callback";
+        const targetUrl = new URL(callbackUrl);
+        targetUrl.searchParams.set("code", code);
+
+        if (state) {
+            targetUrl.searchParams.set("state", state);
+        }
+
+        return targetUrl.toString();
+    }
 
     @Post("register")
     @HttpCode(201)
@@ -80,6 +98,22 @@ export class AuthController {
         return this.authService.login(loginDto);
     }
 
+    @Post("exchange")
+    @HttpCode(200)
+    @ApiOperation({ summary: "Exchange one-time social code for JWT tokens" })
+    @ApiBody({ type: ExchangeCodeDto })
+    @ApiResponse({
+        status: 200,
+        description: "Code exchange successful",
+        type: TokenExchangeResponseDto,
+    })
+    async exchangeSocialCode(@Body() exchangeCodeDto: ExchangeCodeDto) {
+        return this.authService.exchangeSocialCode(
+            exchangeCodeDto.code,
+            exchangeCodeDto.state,
+        );
+    }
+
     @Post("logout")
     @UseGuards(JwtAuthGuard)
     @HttpCode(200)
@@ -92,6 +126,7 @@ export class AuthController {
     })
     logout(@Res({ passthrough: true }) res: Response) {
         res.clearCookie("accessToken", ACCESS_TOKEN_COOKIE_OPTIONS);
+        res.clearCookie("refreshToken", ACCESS_TOKEN_COOKIE_OPTIONS);
         return { message: "Successfully logged out" };
     }
 
@@ -126,14 +161,16 @@ export class AuthController {
         type: AuthResponseDto,
     })
     async googleCallback(@Req() req: any, @Res() res: Response) {
-        const result = await this.authService.socialLogin(req.user);
-
-        res.cookie(
-            "accessToken",
-            result.accessToken,
-            ACCESS_TOKEN_COOKIE_OPTIONS,
+        const loginResult = await this.authService.socialLogin(req.user);
+        const exchangeCode = this.authService.createSocialExchangeCode(
+            loginResult.user.id,
+            "google",
+            req.query?.state,
         );
-        const redirectUrl = `https://cobbak-lecture.com/auth/social`;
+        const redirectUrl = this.buildSocialCallbackRedirectUrl(
+            exchangeCode,
+            req.query?.state,
+        );
         return res.redirect(redirectUrl);
     }
 
@@ -155,15 +192,16 @@ export class AuthController {
         type: AuthResponseDto,
     })
     async kakaoCallback(@Req() req: any, @Res() res: Response) {
-        const result = await this.authService.socialLogin(req.user);
-        res.cookie(
-            "accessToken",
-            result.accessToken,
-            ACCESS_TOKEN_COOKIE_OPTIONS,
+        const loginResult = await this.authService.socialLogin(req.user);
+        const exchangeCode = this.authService.createSocialExchangeCode(
+            loginResult.user.id,
+            "kakao",
+            req.query?.state,
         );
-        const redirectUrl = `https://cobbak-lecture.com/auth/social?accessToken=${encodeURIComponent(
-            result.accessToken,
-        )}`;
+        const redirectUrl = this.buildSocialCallbackRedirectUrl(
+            exchangeCode,
+            req.query?.state,
+        );
         return res.redirect(redirectUrl);
     }
 
@@ -185,15 +223,16 @@ export class AuthController {
         type: AuthResponseDto,
     })
     async naverCallback(@Req() req: any, @Res() res: Response) {
-        const result = await this.authService.socialLogin(req.user);
-        res.cookie(
-            "accessToken",
-            result.accessToken,
-            ACCESS_TOKEN_COOKIE_OPTIONS,
+        const loginResult = await this.authService.socialLogin(req.user);
+        const exchangeCode = this.authService.createSocialExchangeCode(
+            loginResult.user.id,
+            "naver",
+            req.query?.state,
         );
-        const redirectUrl = `https://cobbak-lecture.com/auth/social?accessToken=${encodeURIComponent(
-            result.accessToken,
-        )}`;
+        const redirectUrl = this.buildSocialCallbackRedirectUrl(
+            exchangeCode,
+            req.query?.state,
+        );
         return res.redirect(redirectUrl);
     }
 }

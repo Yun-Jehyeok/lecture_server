@@ -71,3 +71,21 @@ export class SocialLoginDto {
     @IsNotEmpty()
     accessToken!: string;
 }
+
+export class ExchangeCodeDto {
+    @ApiProperty({
+        example:
+            "f4e6f4c7bf2e40c8a0a5d9f9564f4f5f0f5d0cc4c37d73f6d1d2c6f5f4e6a1b2",
+        description: "One-time login exchange code issued by social callback",
+    })
+    @IsString()
+    @IsNotEmpty()
+    code!: string;
+
+    @ApiPropertyOptional({
+        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        description: "Optional OAuth state for additional CSRF validation",
+    })
+    @IsString()
+    state?: string;
+}
