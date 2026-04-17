@@ -10,71 +10,79 @@ export class EnrollmentsService {
     constructor(private prismaService: PrismaService) {}
 
     async enrollCourse(userId: string, courseId: string) {
-        const existingEnrollment = await (
-            this.prismaService as any
-        ).enrollment.findUnique({
-            where: {
-                userId_courseId: {
+        return this.prismaService.$transaction(async (tx) => {
+            const existingEnrollment = await (tx as any).enrollment.findUnique({
+                where: {
+                    userId_courseId: {
+                        userId,
+                        courseId,
+                    },
+                },
+            });
+
+            if (existingEnrollment) {
+                throw new BadRequestException(
+                    "Already enrolled in this course",
+                );
+            }
+
+            const course = await (tx as any).course.findUnique({
+                where: { id: courseId },
+            });
+
+            if (!course) {
+                throw new NotFoundException("Course not found");
+            }
+
+            const enrollment = await (tx as any).enrollment.create({
+                data: {
                     userId,
                     courseId,
                 },
-            },
-        });
-
-        if (existingEnrollment) {
-            throw new BadRequestException("Already enrolled in this course");
-        }
-
-        const course = await (this.prismaService as any).course.findUnique({
-            where: { id: courseId },
-        });
-
-        if (!course) {
-            throw new NotFoundException("Course not found");
-        }
-
-        const enrollment = await (this.prismaService as any).enrollment.create({
-            data: {
-                userId,
-                courseId,
-            },
-            include: {
-                course: {
-                    include: {
-                        category: true,
-                        sections: {
-                            include: {
-                                lessons: true,
+                include: {
+                    course: {
+                        include: {
+                            category: true,
+                            sections: {
+                                include: {
+                                    lessons: true,
+                                },
                             },
                         },
                     },
                 },
-            },
-        });
+            });
 
-        // Create user lesson progress entries
-        const sections = await (
-            this.prismaService as any
-        ).curriculumSection.findMany({
-            where: { courseId },
-            include: {
-                lessons: true,
-            },
-        });
-
-        for (const section of sections) {
-            for (const lesson of section.lessons) {
-                await (this.prismaService as any).userLessonProgress.create({
-                    data: {
-                        userId,
-                        lessonId: lesson.id,
-                        enrollmentId: enrollment.id,
+            await (tx as any).course.update({
+                where: { id: courseId },
+                data: {
+                    totalStudents: {
+                        increment: 1,
                     },
-                });
-            }
-        }
+                },
+            });
 
-        return enrollment;
+            const sections = await (tx as any).curriculumSection.findMany({
+                where: { courseId },
+                include: {
+                    lessons: true,
+                },
+            });
+
+            for (const section of sections) {
+                for (const lesson of section.lessons) {
+                    await (tx as any).userLessonProgress.create({
+                        data: {
+                            userId,
+                            lessonId: lesson.id,
+                            enrollmentId: enrollment.id,
+                        },
+                    });
+                }
+            }
+
+            return enrollment;
+        });
     }
 
     async getMyEnrollments(userId: string) {
@@ -114,8 +122,29 @@ export class EnrollmentsService {
     }
 
     async deleteEnrollment(enrollmentId: string) {
-        return (this.prismaService as any).enrollment.delete({
-            where: { id: enrollmentId },
+        return this.prismaService.$transaction(async (tx) => {
+            const enrollment = await (tx as any).enrollment.findUnique({
+                where: { id: enrollmentId },
+            });
+
+            if (!enrollment) {
+                throw new NotFoundException("Enrollment not found");
+            }
+
+            const deletedEnrollment = await (tx as any).enrollment.delete({
+                where: { id: enrollmentId },
+            });
+
+            await (tx as any).course.update({
+                where: { id: enrollment.courseId },
+                data: {
+                    totalStudents: {
+                        decrement: 1,
+                    },
+                },
+            });
+
+            return deletedEnrollment;
         });
     }
 
