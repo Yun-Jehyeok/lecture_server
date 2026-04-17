@@ -60,8 +60,12 @@ export class AuthController {
 
     private buildSocialCallbackRedirectUrl(code: string, state?: string) {
         const callbackUrl =
-            this.configService.get<string>("FRONTEND_SOCIAL_CALLBACK_URL") ||
-            "http://localhost:3000/auth/callback";
+            this.configService.get<string>("NODE_ENV") === "production"
+                ? "https://www.cobbak-lecture.com/auth/callback"
+                : this.configService.get<string>(
+                      "FRONTEND_SOCIAL_CALLBACK_URL",
+                      "http://localhost:3000/auth/callback",
+                  );
         const targetUrl = new URL(callbackUrl);
         targetUrl.searchParams.set("code", code);
 
