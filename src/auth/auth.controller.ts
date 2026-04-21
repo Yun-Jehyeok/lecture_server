@@ -41,7 +41,7 @@ import {
     ExchangeCodeDto,
 } from "./auth.dto";
 import { Response } from "express";
-import { ConfigService } from "@nestjs/config";
+import { parsePackedSocialState } from "@/auth/social-callback-state";
 
 const ACCESS_TOKEN_COOKIE_OPTIONS = {
     httpOnly: true,
@@ -55,21 +55,13 @@ export class AuthController {
     constructor(
         private authService: AuthService,
         private usersService: UsersService,
-        private configService: ConfigService,
     ) {}
 
-    private buildSocialCallbackRedirectUrl(code: string, state?: string) {
-        const callbackUrl =
-            this.configService.get<string>("NODE_ENV") === "production"
-                ? "https://www.cobbak-lecture.com/auth/callback"
-                : this.configService.get<string>(
-                      "FRONTEND_SOCIAL_CALLBACK_URL",
-                      "http://localhost:3000/auth/callback",
-                  );
-        // const callbackUrl = this.configService.get<string>(
-        //     "FRONTEND_SOCIAL_CALLBACK_URL",
-        //     "http://localhost:3000/auth/callback",
-        // );
+    private buildSocialCallbackRedirectUrl(
+        code: string,
+        callbackUrl: string,
+        state?: string,
+    ) {
         const targetUrl = new URL(callbackUrl);
         targetUrl.searchParams.set("code", code);
 
@@ -170,14 +162,18 @@ export class AuthController {
     })
     async googleCallback(@Req() req: any, @Res() res: Response) {
         const loginResult = await this.authService.socialLogin(req.user);
+        const { callbackUrl, clientState } = parsePackedSocialState(
+            req.query?.state,
+        );
         const exchangeCode = this.authService.createSocialExchangeCode(
             loginResult.user.id,
             "google",
-            req.query?.state,
+            clientState,
         );
         const redirectUrl = this.buildSocialCallbackRedirectUrl(
             exchangeCode,
-            req.query?.state,
+            callbackUrl,
+            clientState,
         );
         return res.redirect(redirectUrl);
     }
@@ -201,14 +197,18 @@ export class AuthController {
     })
     async kakaoCallback(@Req() req: any, @Res() res: Response) {
         const loginResult = await this.authService.socialLogin(req.user);
+        const { callbackUrl, clientState } = parsePackedSocialState(
+            req.query?.state,
+        );
         const exchangeCode = this.authService.createSocialExchangeCode(
             loginResult.user.id,
             "kakao",
-            req.query?.state,
+            clientState,
         );
         const redirectUrl = this.buildSocialCallbackRedirectUrl(
             exchangeCode,
-            req.query?.state,
+            callbackUrl,
+            clientState,
         );
         return res.redirect(redirectUrl);
     }
@@ -232,14 +232,18 @@ export class AuthController {
     })
     async naverCallback(@Req() req: any, @Res() res: Response) {
         const loginResult = await this.authService.socialLogin(req.user);
+        const { callbackUrl, clientState } = parsePackedSocialState(
+            req.query?.state,
+        );
         const exchangeCode = this.authService.createSocialExchangeCode(
             loginResult.user.id,
             "naver",
-            req.query?.state,
+            clientState,
         );
         const redirectUrl = this.buildSocialCallbackRedirectUrl(
             exchangeCode,
-            req.query?.state,
+            callbackUrl,
+            clientState,
         );
         return res.redirect(redirectUrl);
     }
